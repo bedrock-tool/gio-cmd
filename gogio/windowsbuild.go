@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image/png"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,7 +20,49 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
+// checkWindowsVersion reports whether a version can be represented on Windows.
+// Both the VS_FIXEDFILEINFO fields and the manifest assembly identity give each
+// of the four components 16 bits, unlike android:versionCode, which is a plain
+// 32-bit build counter.
+//
+// https://learn.microsoft.com/en-us/windows/win32/sbscs/application-manifests#assemblyIdentity
+func checkWindowsVersion(v Semver) error {
+	for _, c := range []struct {
+		name string
+		val  int64
+	}{
+		{"major", int64(v.Major)},
+		{"minor", int64(v.Minor)},
+		{"patch", int64(v.Patch)},
+		{"versioncode", int64(v.VersionCode)},
+	} {
+		if c.val < 0 || c.val > math.MaxUint16 {
+			return fmt.Errorf("invalid -version: the %s component is %d, but Windows requires every component to be in the range [0, %d]", c.name, c.val, math.MaxUint16)
+		}
+	}
+	return nil
+}
+
+// windowsFixedVersion packs a version into the dwFileVersionMS and
+// dwFileVersionLS pair of VS_FIXEDFILEINFO, where each of the four components
+// occupies one 16-bit half:
+//
+//	MS = major<<16 | minor
+//	LS = patch<<16 | versioncode
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+func windowsFixedVersion(v Semver) [2]uint32 {
+	return [2]uint32{
+		uint32(v.Major)<<16 | uint32(v.Minor),
+		uint32(v.Patch)<<16 | v.VersionCode,
+	}
+}
+
 func buildWindows(tmpDir string, bi *buildInfo) error {
+	if err := checkWindowsVersion(bi.version); err != nil {
+		return err
+	}
+
 	builder := &windowsBuilder{TempDir: tmpDir}
 	builder.DestDir = *destPath
 	if builder.DestDir == "" {
@@ -56,7 +99,7 @@ func buildWindows(tmpDir string, bi *buildInfo) error {
 		}
 
 		if err := builder.embedInfo(windowsResources{
-			Version:      [2]uint32{uint32(bi.version.Major), uint32(bi.version.Minor)<<16 | uint32(bi.version.Patch)},
+			Version:      windowsFixedVersion(bi.version),
 			VersionHuman: bi.version.String(),
 			Name:         name,
 			Language:     0x0400, // Process Default Language: https://docs.microsoft.com/en-us/previous-versions/ms957130(v=msdn.10)

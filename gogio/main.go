@@ -29,7 +29,7 @@ var (
 	destPath      = flag.String("o", "", "output file or directory.\nFor -target ios or tvos, use the .app suffix to target simulators.")
 	appID         = flag.String("appid", "", "app identifier (for -buildmode=exe)")
 	name          = flag.String("name", "", "app name (for -buildmode=exe)")
-	version       = flag.String("version", "1.0.0.1", "semver app version (for -buildmode=exe) on the form major.minor.patch.versioncode. The versioncode is not used for iOS and macOS.")
+	version       = flag.String("version", "1.0.0.1", "semver app version (for -buildmode=exe) on the form major.minor.patch.versioncode. The versioncode is the build number on Android, iOS and macOS, and is not part of their version strings.")
 	printCommands = flag.Bool("x", false, "print the commands")
 	keepWorkdir   = flag.Bool("work", false, "print the name of the temporary work directory and do not delete it when exiting.")
 	linkMode      = flag.String("linkmode", "", "set the -linkmode flag of the go tool")
@@ -43,6 +43,9 @@ var (
 	notaryTeamID  = flag.String("notaryteamid", "", "specify the team id to use for notarization.")
 	schemes       = flag.String("schemes", "", "specify a list of comma separated URL schemes that the program accepts")
 	pkgQueries    = flag.String("queries", "", "specify a list of comma separated package names used to query other apps on Android.")
+	// Android manifest additions (bedrocktool)
+	androidApp   = flag.String("androidapp", "", "specify a file of XML to add inside the Android manifest's <application> element (providers, services, receivers).")
+	androidPerms = flag.String("androidperms", "", "specify a comma-separated list of extra Android permissions for the manifest, such as android.permission.WAKE_LOCK.")
 )
 
 func main() {
