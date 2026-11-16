@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -50,6 +51,8 @@ type manifestData struct {
 	AppName        string
 	Schemes        []string
 	PackageQueries []string
+	// AppExtra is XML added inside <application> (-androidapp; bedrocktool)
+	AppExtra string
 }
 
 const (
@@ -448,6 +451,19 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 		Schemes:        bi.schemes,
 		PackageQueries: bi.packageQueries,
 	}
+	// -androidperms (bedrocktool)
+	for _, perm := range strings.Split(*androidPerms, ",") {
+		if perm = strings.TrimSpace(perm); perm != "" && !slices.Contains(manifestSrc.Permissions, perm) {
+			manifestSrc.Permissions = append(manifestSrc.Permissions, perm)
+		}
+	}
+	if *androidApp != "" {
+		extra, err := os.ReadFile(*androidApp)
+		if err != nil {
+			return err
+		}
+		manifestSrc.AppExtra = string(extra)
+	}
 	tmpl, err := template.New("test").Parse(
 		`<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -485,6 +501,7 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 			</intent-filter>
 			{{end}}
 		</activity>
+{{.AppExtra}}
 	</application>
 </manifest>`)
 	var manifestBuffer bytes.Buffer

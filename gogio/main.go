@@ -43,6 +43,9 @@ var (
 	notaryTeamID  = flag.String("notaryteamid", "", "specify the team id to use for notarization.")
 	schemes       = flag.String("schemes", "", "specify a list of comma separated URL schemes that the program accepts")
 	pkgQueries    = flag.String("queries", "", "specify a list of comma separated package names used to query other apps on Android.")
+	// Android manifest additions (bedrocktool)
+	androidApp   = flag.String("androidapp", "", "specify a file of XML to add inside the Android manifest's <application> element (providers, services, receivers).")
+	androidPerms = flag.String("androidperms", "", "specify a comma-separated list of extra Android permissions for the manifest, such as android.permission.WAKE_LOCK.")
 )
 
 func main() {
